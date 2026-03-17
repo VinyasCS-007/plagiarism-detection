@@ -1,0 +1,175 @@
+# =============================================================================
+# Production Docker Compose – Plagiarism Detection System
+# =============================================================================
+# Starts: PostgreSQL+pgvector | Redis | MinIO | Backend API | Celery | Frontend
+# Usage:  docker compose -f docker-compose.prod.yml up -d
+# =============================================================================
+
+services:
+
+  # ─── DATABASE (PostgreSQL + pgvector) ────────────────────────────────────
+  db:
+    image: ankane/pgvector:v0.5.1
+    container_name: plagiarism_db
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password}
+      POSTGRES_DB: ${POSTGRES_DB:-plagiarism_db}
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data/
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-user}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ─── REDIS (Task Queue + Caching) ───────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: plagiarism_redis
+    restart: always
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ─── MINIO (Object Storage for uploads) ─────────────────────────────────
+  minio:
+    image: minio/minio
+    container_name: plagiarism_minio
+    restart: always
+    ports:
+      - "${MINIO_PORT:-9000}:9000"
+      - "${MINIO_CONSOLE_PORT:-9001}:9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
+    command: server /data --console-address ":9001"
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ─── BACKEND API (FastAPI + Gunicorn + Uvicorn) ─────────────────────────
+  # Includes: Sentence-BERT model loading, DB migration, seed
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: plagiarism_api
+    restart: always
+    ports:
+      - "${API_PORT:-8000}:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_started
+    env_file:
+      - ./backend/.env.docker
+    environment:
+      # Override DB URL to use Docker service name
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-user}:${POSTGRES_PASSWORD:-password}@db:5432/${POSTGRES_DB:-plagiarism_db}
+      REDIS_URL: redis://redis:6379/0
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/0
+      S3_ENDPOINT_URL: http://minio:9000
+    volumes:
+      - upload_data:/app/uploads
+      - bert_model_cache:/root/.cache/huggingface
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s  # BERT model loading takes time
+
+  # ─── CELERY WORKER (Async plagiarism analysis + AI detection) ───────────
+  celery-worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: plagiarism_celery_worker
+    restart: always
+    command: celery -A app.core.celery.app worker -l info --concurrency=2
+    depends_on:
+      redis:
+        condition: service_healthy
+      api:
+        condition: service_healthy
+    env_file:
+      - ./backend/.env.docker
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-user}:${POSTGRES_PASSWORD:-password}@db:5432/${POSTGRES_DB:-plagiarism_db}
+      REDIS_URL: redis://redis:6379/0
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/0
+      S3_ENDPOINT_URL: http://minio:9000
+    volumes:
+      - upload_data:/app/uploads
+      - bert_model_cache:/root/.cache/huggingface
+
+  # ─── CELERY BEAT (Scheduled tasks) ──────────────────────────────────────
+  celery-beat:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: plagiarism_celery_beat
+    restart: always
+    command: celery -A app.core.celery.app beat -l info
+    depends_on:
+      redis:
+        condition: service_healthy
+      api:
+        condition: service_healthy
+    env_file:
+      - ./backend/.env.docker
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-user}:${POSTGRES_PASSWORD:-password}@db:5432/${POSTGRES_DB:-plagiarism_db}
+      REDIS_URL: redis://redis:6379/0
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/0
+
+  # ─── FRONTEND (React + Vite + Nginx) ────────────────────────────────────
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    container_name: plagiarism_frontend
+    restart: always
+    ports:
+      - "${FRONTEND_PORT:-80}:80"
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+# ─── PERSISTENT VOLUMES ──────────────────────────────────────────────────
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  minio_data:
+    driver: local
+  upload_data:
+    driver: local
+  bert_model_cache:
+    driver: local

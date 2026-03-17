@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import { useAuth } from '../hooks/useAuth';
 
 const LoginPage = () => {
@@ -9,6 +10,33 @@ const LoginPage = () => {
     const [isLoading, setIsLoading] = useState(false);
     const { login } = useAuth();
     const navigate = useNavigate();
+    const containerVariants = {
+        hidden: { opacity: 0 },
+        show: { opacity: 1, transition: { staggerChildren: 0.12 } },
+    };
+    const itemVariants = {
+        hidden: { opacity: 0, y: 18 },
+        show: { opacity: 1, y: 0 },
+    };
+    const handleParallax = (e: React.MouseEvent<HTMLElement>) => {
+        const target = e.currentTarget as HTMLElement;
+        const rect = target.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+        const rx = (0.5 - y / rect.height) * 8;
+        const ry = (x / rect.width - 0.5) * 10;
+        target.style.setProperty('--rx', `${rx}deg`);
+        target.style.setProperty('--ry', `${ry}deg`);
+        target.style.setProperty('--gx', `${(x / rect.width) * 100}%`);
+        target.style.setProperty('--gy', `${(y / rect.height) * 100}%`);
+    };
+    const handleParallaxLeave = (e: React.MouseEvent<HTMLElement>) => {
+        const target = e.currentTarget as HTMLElement;
+        target.style.setProperty('--rx', '0deg');
+        target.style.setProperty('--ry', '0deg');
+        target.style.setProperty('--gx', '50%');
+        target.style.setProperty('--gy', '50%');
+    };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -44,50 +72,70 @@ const LoginPage = () => {
     };
 
     return (
-        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '80vh' }}>
-            <div className="glass" style={{ maxWidth: '420px', width: '100%', padding: '40px' }}>
-                <div style={{ textAlign: 'center', marginBottom: '32px' }}>
-                    <div style={{ fontSize: '48px', marginBottom: '16px' }}>🔐</div>
-                    <h2 style={{ fontSize: '28px', fontWeight: 700, marginBottom: '8px' }}>Welcome Back</h2>
-                    <p style={{ color: 'var(--text-secondary)' }}>
-                        Don't have an account? <Link to="/register" style={{ color: 'var(--primary)' }}>Sign up</Link>
+        <div className="auth-shell">
+            <motion.div className="container auth-grid" variants={containerVariants} initial="hidden" animate="show">
+                <motion.div className="auth-panel glow-card parallax-card" variants={itemVariants} onMouseMove={handleParallax} onMouseLeave={handleParallaxLeave}>
+                    <div className="pill">
+                        <span className="dot"></span>
+                        Secure Sign-In
+                    </div>
+                    <h1 className="auth-hero">Welcome back to Integrity OS</h1>
+                    <p className="auth-copy">
+                        Track every submission with clarity. Your dashboard is ready to light up the moment you sign in.
                     </p>
-                </div>
+                    <ul className="auth-list">
+                        <li><span className="text-gradient">✓</span> One-click access to all batch reports</li>
+                        <li><span className="text-gradient">✓</span> Real-time plagiarism and AI detection updates</li>
+                        <li><span className="text-gradient">✓</span> Cinema-grade reporting for faculty reviews</li>
+                    </ul>
+                    <div className="auth-footer">Need an account? <Link to="/register">Create one in minutes</Link></div>
+                </motion.div>
 
-                <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                    <div>
-                        <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', color: 'var(--text-secondary)' }}>Email</label>
-                        <input
-                            type="email"
-                            required
-                            value={email}
-                            onChange={(e) => setEmail(e.target.value)}
-                            placeholder="you@example.com"
-                        />
+                <motion.div className="auth-card glass glow-card parallax-card" variants={itemVariants} onMouseMove={handleParallax} onMouseLeave={handleParallaxLeave}>
+                    <div className="auth-header">
+                        <div className="auth-chip">Sign In</div>
+                        <h2 className="display-font" style={{ fontSize: '28px' }}>Log into your console</h2>
+                        <p className="auth-footer">New here? <Link to="/register">Create an account</Link></p>
                     </div>
 
-                    <div>
-                        <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', color: 'var(--text-secondary)' }}>Password</label>
-                        <input
-                            type="password"
-                            required
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                            placeholder="••••••••"
-                        />
-                    </div>
-
-                    {error && (
-                        <div style={{ padding: '12px', background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.3)', borderRadius: '8px', color: '#ef4444', fontSize: '14px' }}>
-                            {error}
+                    <form onSubmit={handleSubmit} className="auth-form">
+                        <div className="input-group">
+                            <label className="input-label">Email</label>
+                            <input
+                                type="email"
+                                required
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
+                                placeholder="you@example.com"
+                            />
                         </div>
-                    )}
 
-                    <button type="submit" className="btn-primary" disabled={isLoading} style={{ width: '100%', justifyContent: 'center' }}>
-                        {isLoading ? 'Signing in...' : 'Sign In'}
-                    </button>
-                </form>
-            </div>
+                        <div className="input-group">
+                            <label className="input-label">Password</label>
+                            <input
+                                type="password"
+                                required
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                                placeholder="••••••••"
+                            />
+                        </div>
+
+                        {error && (
+                            <div className="auth-error">
+                                {error}
+                            </div>
+                        )}
+
+                        <button type="submit" className="btn-primary btn-lg btn-block" disabled={isLoading}>
+                            {isLoading ? 'Signing in...' : 'Sign In'}
+                        </button>
+
+                        <div className="auth-divider">Or</div>
+                        <Link to="/register" className="btn-secondary btn-lg btn-block">Create Account</Link>
+                    </form>
+                </motion.div>
+            </motion.div>
         </div>
     );
 };

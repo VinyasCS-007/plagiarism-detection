@@ -1,0 +1,2 @@
+base.Base.metadata.create_all(engine
+print('tables:', [t.name for t in base.Base.metadata.sorted_tables]

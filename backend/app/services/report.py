@@ -1,10 +1,13 @@
 import csv
 import io
-from typing import List, Dict, Any
+from typing import List, Dict
+from collections import defaultdict
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import letter
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.graphics.shapes import Drawing
+from reportlab.graphics.charts.barcharts import VerticalBarChart
 from app.models.document import Document
 from app.models.batch import Batch
 
@@ -12,7 +15,7 @@ class ReportService:
     """Service for generating reports (PDF, CSV)"""
 
     @classmethod
-    def generate_csv_report(cls, documents: List[Document]) -> str:
+    def generate_csv_report(cls, documents: List[Document], plagiarism_scores: Dict[str, float]) -> str:
         """Generate CSV report for a list of documents"""
         output = io.StringIO()
         writer = csv.writer(output)
@@ -27,33 +30,31 @@ class ReportService:
                 doc.status,
                 f"{doc.ai_score:.2f}" if doc.ai_score is not None else "N/A",
                 "Yes" if doc.is_ai_generated else "No",
-                f"{self._calculate_plagiarism_score(doc, documents):.2f}"
+                f"{plagiarism_scores.get(str(doc.id), 0.0):.2f}"
             ])
             
         return output.getvalue()
     
     @classmethod
-    def _calculate_plagiarism_score(cls, document: Document, all_documents: List[Document]) -> float:
-        """Calculate plagiarism score based on document similarities"""
-        # In a real implementation, we would query the database for comparisons
-        # For now, we'll calculate a simple score based on document content similarities
-        if not document.text_content or len(all_documents) <= 1:
-            return 0.0
-        
-        # Calculate similarity with other documents in the batch
-        from difflib import SequenceMatcher
-        similarities = []
-        
-        for other_doc in all_documents:
-            if other_doc.id != document.id and other_doc.text_content:
-                similarity = SequenceMatcher(None, document.text_content, other_doc.text_content).ratio()
-                similarities.append(similarity)
-        
-        # Return average similarity as plagiarism score
-        return sum(similarities) / len(similarities) if similarities else 0.0
+    def build_plagiarism_scores(cls, documents: List[Document], comparisons: List) -> Dict[str, float]:
+        """
+        Calculate plagiarism score per document based on stored semantic comparisons.
+        Uses the maximum similarity observed for each document in the batch.
+        """
+        scores = defaultdict(float)
+        for comp in comparisons:
+            doc_a = str(comp.doc_a)
+            doc_b = str(comp.doc_b)
+            scores[doc_a] = max(scores[doc_a], float(comp.similarity or 0.0))
+            scores[doc_b] = max(scores[doc_b], float(comp.similarity or 0.0))
+
+        for doc in documents:
+            scores.setdefault(str(doc.id), 0.0)
+
+        return dict(scores)
 
     @staticmethod
-    def generate_pdf_report(batch: Batch, documents: List[Document]) -> bytes:
+    def generate_pdf_report(batch: Batch, documents: List[Document], plagiarism_scores: Dict[str, float]) -> bytes:
         """Generate PDF report for a batch"""
         buffer = io.BytesIO()
         doc = SimpleDocTemplate(buffer, pagesize=letter)
@@ -69,15 +70,43 @@ class ReportService:
         story.append(Paragraph(f"Total Documents: {len(documents)}", styles['Normal']))
         story.append(Spacer(1, 24))
 
+        # Summary chart (avg plagiarism vs avg AI)
+        if documents:
+            plag_values = [plagiarism_scores.get(str(doc_item.id), 0.0) * 100 for doc_item in documents]
+            ai_values = [(doc_item.ai_score or 0.0) * 100 for doc_item in documents]
+            avg_plag = sum(plag_values) / len(plag_values)
+            avg_ai = sum(ai_values) / len(ai_values)
+
+            drawing = Drawing(420, 200)
+            chart = VerticalBarChart()
+            chart.x = 60
+            chart.y = 30
+            chart.height = 120
+            chart.width = 300
+            chart.data = [[avg_plag, avg_ai]]
+            chart.categoryAxis.categoryNames = ['Plagiarism', 'AI']
+            chart.valueAxis.valueMin = 0
+            chart.valueAxis.valueMax = 100
+            chart.valueAxis.valueStep = 20
+            chart.barWidth = 30
+            chart.groupSpacing = 10
+            chart.barSpacing = 5
+            drawing.add(chart)
+
+            story.append(Paragraph("Summary Averages (%)", styles['Heading3']))
+            story.append(drawing)
+            story.append(Spacer(1, 24))
+
         # Table Data
-        data = [['Filename', 'AI Score', 'Verdict']]
+        data = [['Filename', 'AI Score', 'Verdict', 'Plagiarism Score']]
         for doc_item in documents:
             score = f"{doc_item.ai_score:.1%}" if doc_item.ai_score is not None else "N/A"
             verdict = "AI-Generated" if doc_item.is_ai_generated else "Human-Written"
             if doc_item.ai_score is None:
                 verdict = "Pending/Error"
             
-            data.append([doc_item.filename, score, verdict])
+            plag_score = f"{plagiarism_scores.get(str(doc_item.id), 0.0):.2f}"
+            data.append([doc_item.filename, score, verdict, plag_score])
 
         # Table Style
         table = Table(data)

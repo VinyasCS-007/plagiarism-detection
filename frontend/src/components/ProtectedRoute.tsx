@@ -1,39 +1,38 @@
-import { useContext } from 'react';
-import { Navigate, useLocation } from 'react-router-dom';
-import { AuthContext } from '../contexts/AuthContext';
+import { Navigate, Outlet } from 'react-router-dom';
+import { useAuth } from '../hooks/useAuth';
 
 interface ProtectedRouteProps {
-  children: JSX.Element;
-  requiredRole?: 'admin' | 'moderator' | 'user';
+    requiredRole?: 'user' | 'admin';
 }
 
-const ProtectedRoute = ({ children, requiredRole = 'user' }: ProtectedRouteProps) => {
-  const authContext = useContext(AuthContext);
-  const location = useLocation();
-  
-  // Check if context exists
-  if (!authContext) {
-    // If context is not available, redirect to login
-    return <Navigate to="/login" replace />;
-  }
+const ProtectedRoute = ({ requiredRole }: ProtectedRouteProps) => {
+    const { isAuthenticated, user } = useAuth();
 
-  const { isAuthenticated, token } = authContext;
+    if (!isAuthenticated) {
+        return <Navigate to="/login" replace />;
+    }
 
-  // Check if user is authenticated
-  if (!isAuthenticated || !token) {
-    // Redirect to login with return url
-    return <Navigate to="/login" state={{ from: location }} replace />;
-  }
+    if (requiredRole && user?.role !== requiredRole) {
+        // If an admin attempts to access a student route (rare), or student attempts admin
+        return (
+            <div className="container" style={{ textAlign: 'center', padding: '100px 0' }}>
+                <div style={{ fontSize: '80px', marginBottom: '20px' }}>⛔</div>
+                <h1 style={{ fontSize: '32px', fontWeight: 800, marginBottom: '16px' }}>Access Denied</h1>
+                <p style={{ color: 'var(--text-secondary)', marginBottom: '32px', fontSize: '18px' }}>
+                    You do not have permission to access {requiredRole === 'admin' ? 'administrative' : 'student'} features.
+                </p>
+                <button 
+                    onClick={() => window.location.href = '/dashboard'}
+                    className="btn-primary" 
+                    style={{ padding: '12px 32px' }}
+                >
+                    Return to Dashboard
+                </button>
+            </div>
+        );
+    }
 
-  // If this is an admin route, we'll check the user's role via API call
-  if (requiredRole === 'admin') {
-    // For now, we'll just render the component and let the backend handle authorization
-    // In a real app, you might want to fetch user data first to check role
-    return children;
-  }
-
-  // For other roles, just check authentication
-  return children;
+    return <Outlet />;
 };
 
 export default ProtectedRoute;

@@ -1,0 +1,2 @@
+p=Path(r\"backend/app/services/embedding.py\"
+t=p.read_text(

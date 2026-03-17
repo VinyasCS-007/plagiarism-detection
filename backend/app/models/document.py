@@ -12,7 +12,7 @@ class Document(Base):
     content_hash = Column(String)
     mime_type = Column(String)
     text_content = Column(Text)
-    embedding = Column(Vector(384))  # Assuming sentence-transformers/all-MiniLM-L6-v2 embedding dim
+    embedding = Column(Vector(786))  # 786-d embedding vectors
     storage_path = Column(String)
     uploaded_by = Column(UUID(as_uuid=True))
     status = Column(String, default="queued")  # queued, processing, completed, failed

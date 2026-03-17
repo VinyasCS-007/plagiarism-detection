@@ -1,49 +1,37 @@
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 
 const Navbar = () => {
   const { isAuthenticated, logout, user } = useAuth();
+  const isAdmin = user?.role === 'admin';
+  const location = useLocation();
+  const isActive = (path: string) => location.pathname === path;
 
   return (
-    <nav className="glass fixed top-5 left-1/2 -translate-x-1/2 w-[calc(100%-40px)] max-w-[1200px] z-[1000] p-3 px-6 rounded-[20px] shadow-2xl" style={{
-      background: 'rgba(17, 24, 39, 0.7)',
-      backdropFilter: 'blur(16px)',
-      border: '1px solid rgba(255, 255, 255, 0.08)'
-    }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: '12px', textDecoration: 'none' }}>
-          <div style={{
-            width: '36px',
-            height: '36px',
-            background: 'linear-gradient(135deg, var(--primary), var(--accent))',
-            borderRadius: '10px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            boxShadow: '0 4px 12px rgba(99, 102, 241, 0.3)'
-          }}>
-            <span style={{ fontSize: '18px' }}>🛡️</span>
-          </div>
-          <span className="text-gradient" style={{ fontSize: '22px', fontWeight: 800, letterSpacing: '-0.02em' }}>
-            PlagDetect
-          </span>
+    <nav className="nav-shell glass">
+      <div className="nav-inner">
+        <Link to="/" className="nav-brand">
+          <div className="brand-icon">P</div>
+          <span className="brand-name text-gradient">PlagDetect</span>
         </Link>
 
-        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+        <div className="nav-links">
           {isAuthenticated ? (
             <>
-              <Link to="/dashboard" className="btn-secondary" style={{ textDecoration: 'none', padding: '10px 20px', fontSize: '14px' }}>Dashboard</Link>
-              <Link to="/upload" className="btn-secondary" style={{ textDecoration: 'none', padding: '10px 20px', fontSize: '14px' }}>Upload</Link>
-              <Link to="/ai-check" className="btn-secondary" style={{ textDecoration: 'none', padding: '10px 20px', fontSize: '14px' }}>AI Check</Link>
-              {user && user.role === 'admin' && (
-                <Link to="/admin" className="btn-secondary" style={{ textDecoration: 'none', padding: '10px 20px', fontSize: '14px' }}>Admin</Link>
+              <Link to="/dashboard" className={`btn-secondary nav-chip ${isActive('/dashboard') ? 'nav-link-active' : ''}`}>Dashboard</Link>
+              <Link to="/upload" className={`btn-secondary nav-chip ${isActive('/upload') ? 'nav-link-active' : ''}`}>Upload Report</Link>
+              {isAdmin && (
+                <>
+                  <Link to="/ai-check" className={`btn-secondary nav-chip ${isActive('/ai-check') ? 'nav-link-active' : ''}`}>Plagiarism Check</Link>
+                  <Link to="/admin" className={`btn-secondary nav-chip ${isActive('/admin') ? 'nav-link-active' : ''}`}>Admin</Link>
+                </>
               )}
-              <button className="btn-secondary" style={{ padding: '10px 20px', fontSize: '14px', color: 'var(--error)' }} onClick={() => { logout(); window.location.href = '/'; }}>Logout</button>
+              <button className="btn-secondary nav-chip" style={{ color: 'var(--error)' }} onClick={() => { logout(); window.location.href = '/'; }}>Logout</button>
             </>
           ) : (
             <>
-              <Link to="/login" className="btn-secondary" style={{ textDecoration: 'none', padding: '10px 20px', fontSize: '14px' }}>Login</Link>
-              <Link to="/register" className="btn-primary" style={{ textDecoration: 'none', padding: '10px 24px', fontSize: '14px' }}>Get Started</Link>
+              <Link to="/login" className={`btn-secondary nav-chip ${isActive('/login') ? 'nav-link-active' : ''}`}>Login</Link>
+              <Link to="/register" className={`btn-primary nav-chip ${isActive('/register') ? 'nav-link-active' : ''}`}>Get Started</Link>
             </>
           )}
         </div>

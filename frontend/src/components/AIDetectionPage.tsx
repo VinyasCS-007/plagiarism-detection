@@ -81,8 +81,8 @@ const AIDetectionPage = () => {
                             ))}
                         </div>
                         {provider !== 'local' && (
-                            <div style={{ marginTop: '8px', fontSize: '12px', color: 'var(--warning)', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                ⚠️ External providers may incur costs
+                            <div style={{ marginTop: '8px', fontSize: '12px', color: 'var(--warning)' }}>
+                                Note: External providers may incur costs
                             </div>
                         )}
                     </div>
@@ -116,8 +116,8 @@ const AIDetectionPage = () => {
                             placeholder="Paste the text you want to check for AI authorship..."
                             required
                             rows={10}
-                            className="w-full bg-black/20 border border-white/10 rounded-xl p-4 text-white focus:outline-none focus:border-primary transition-colors"
-                            style={{ width: '100%', background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', padding: '16px', color: 'white' }}
+                            className="w-full rounded-xl p-4 focus:outline-none focus:border-primary transition-colors"
+                            style={{ width: '100%', background: 'rgba(15, 23, 42, 0.04)', border: '1px solid rgba(15, 23, 42, 0.12)', borderRadius: '12px', padding: '16px', color: 'var(--text-primary)' }}
                         />
                     </div>
 

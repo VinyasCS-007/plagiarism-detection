@@ -20,6 +20,7 @@ async def get_current_user(user: User = Depends(fastapi_users.current_user())):
 async def get_user_by_id(
     user_id: str,
     current_user: User = Depends(fastapi_users.current_user()),
+    db: Session = Depends(get_db),
 ):
     """Get user by ID (admin or self only)"""
     # Check if current user is admin or requesting own profile

@@ -7,6 +7,7 @@ from sqlalchemy import select
 from app.core.config import settings
 from app.models.user import User
 from app.models.base import Base
+import app.models
 from passlib.context import CryptContext
 
 # Password hashing context
@@ -24,13 +25,14 @@ async def get_user_by_email(session: AsyncSession, email: str) -> User:
     result = await session.execute(select(User).filter(User.email == email))
     return result.scalar_one_or_none()
 
-async def create_user(session: AsyncSession, email: str, password: str, role: str = "user") -> User:
+async def create_user(session: AsyncSession, email: str, password: str, role: str = "user", name: str | None = None) -> User:
     """Create a new user"""
     hashed_password = pwd_context.hash(password)
     user = User(
         email=email,
         hashed_password=hashed_password,
-        role=role
+        role=role,
+        name=name
     )
     session.add(user)
     await session.commit()
@@ -52,22 +54,22 @@ async def seed_database():
         async_session = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
         
         async with async_session() as session:
-            # Create admin user if not exists
-            admin_email = os.getenv("ADMIN_EMAIL", "admin@example.com")
+            # Create admin (faculty) user if not exists
+            admin_email = os.getenv("ADMIN_EMAIL", "admin@college.edu")
             admin_password = os.getenv("ADMIN_PASSWORD", "AdminPass123!")
             
             existing_admin = await get_user_by_email(session, admin_email)
             if not existing_admin:
-                admin_user = await create_user(session, admin_email, admin_password, "admin")
+                admin_user = await create_user(session, admin_email, admin_password, "admin", "Prof. Admin")
                 print(f"Created admin user: {admin_user.email}")
             else:
                 print(f"Admin user already exists: {existing_admin.email}")
             
-            # Create sample users if they don't exist
+            # Create sample student users
             sample_users = [
-                {"email": "user1@example.com", "password": "UserPass123!", "role": "user"},
-                {"email": "user2@example.com", "password": "UserPass123!", "role": "user"},
-                {"email": "moderator@example.com", "password": "ModPass123!", "role": "moderator"},  # Optional intermediate role
+                {"email": "rahul@college.edu", "password": "Student123!", "role": "user", "name": "Rahul Sharma"},
+                {"email": "priya@college.edu", "password": "Student123!", "role": "user", "name": "Priya Singh"},
+                {"email": "amit@college.edu", "password": "Student123!", "role": "user", "name": "Amit Patel"},
             ]
             
             for user_data in sample_users:
@@ -77,9 +79,10 @@ async def seed_database():
                         session, 
                         user_data["email"], 
                         user_data["password"], 
-                        user_data["role"]
+                        user_data["role"],
+                        user_data.get("name")
                     )
-                    print(f"Created user: {user.email} with role: {user.role}")
+                    print(f"Created student: {user.email} ({user.name})")
                 else:
                     print(f"User already exists: {existing_user.email}")
             

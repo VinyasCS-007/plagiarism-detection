@@ -20,8 +20,8 @@ async def extract_text_from_file(file) -> str:
         content = await file.read()
         filename = file.filename.lower()
     else:
-        content = file
-        filename = ""
+        content = file if isinstance(file, bytes) else file.read()
+        filename = getattr(file, 'name', getattr(file, 'filename', '')).lower()
 
     if filename.endswith(".docx"):
         doc = docx.Document(io.BytesIO(content))

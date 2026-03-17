@@ -1,102 +1,200 @@
 import { Link } from 'react-router-dom';
-import { useAuth } from '../hooks/useAuth';
+import { motion } from 'framer-motion';
 
 const LandingPage = () => {
-  const { isAuthenticated } = useAuth();
+    const containerVariants = {
+        hidden: { opacity: 0 },
+        show: { opacity: 1, transition: { staggerChildren: 0.12 } },
+    };
+    const itemVariants = {
+        hidden: { opacity: 0, y: 18 },
+        show: { opacity: 1, y: 0 },
+    };
+    const handleParallax = (e: React.MouseEvent<HTMLElement>) => {
+        const target = e.currentTarget as HTMLElement;
+        const rect = target.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+        const rx = (0.5 - y / rect.height) * 8;
+        const ry = (x / rect.width - 0.5) * 10;
+        target.style.setProperty('--rx', `${rx}deg`);
+        target.style.setProperty('--ry', `${ry}deg`);
+        target.style.setProperty('--gx', `${(x / rect.width) * 100}%`);
+        target.style.setProperty('--gy', `${(y / rect.height) * 100}%`);
+    };
+    const handleParallaxLeave = (e: React.MouseEvent<HTMLElement>) => {
+        const target = e.currentTarget as HTMLElement;
+        target.style.setProperty('--rx', '0deg');
+        target.style.setProperty('--ry', '0deg');
+        target.style.setProperty('--gx', '50%');
+        target.style.setProperty('--gy', '50%');
+    };
+    return (
+        <motion.div className="page" variants={containerVariants} initial="hidden" animate="show">
+            <motion.section className="hero" variants={itemVariants}>
+                <div className="hero-bg">
+                    <span className="orb one"></span>
+                    <span className="orb two"></span>
+                    <span className="orb three"></span>
+                    <div className="grid-overlay"></div>
+                </div>
 
-  return (
-    <div className="container fade-in" style={{ padding: '80px 0' }}>
-      {/* Hero Section */}
-      <div style={{ textAlign: 'center', marginBottom: '100px', position: 'relative' }}>
-        <div style={{
-          display: 'inline-block',
-          padding: '10px 24px',
-          background: 'rgba(99, 102, 241, 0.1)',
-          border: '1px solid rgba(99, 102, 241, 0.2)',
-          borderRadius: '100px',
-          marginBottom: '32px',
-          fontSize: '14px',
-          fontWeight: 600,
-          color: 'var(--primary)',
-          letterSpacing: '0.05em',
-          textTransform: 'uppercase'
-        }}>
-          ✨ Next-Gen Detection Engine
-        </div>
+                <div className="container hero-inner">
+                    <div>
+                        <div className="pill">
+                            <span className="dot"></span>
+                            Integrity OS
+                        </div>
 
-        <h1 style={{ fontSize: '72px', fontWeight: 800, marginBottom: '28px', lineHeight: 1.05, letterSpacing: '-0.02em' }}>
-          Protect Your Integrity with<br />
-          <span className="text-gradient-primary">Advanced AI Detection</span>
-        </h1>
+                        <h1 className="hero-title">
+                            A cinematic layer of
+                            <span className="text-gradient"> academic integrity</span>
+                        </h1>
 
-        <p style={{ fontSize: '22px', color: 'var(--text-secondary)', marginBottom: '48px', maxWidth: '700px', margin: '0 auto 48px', fontWeight: 400 }}>
-          The ultimate open-source solution for plagiarism and AI-generated content detection. Fast, secure, and incredibly accurate.
-        </p>
+                        <p className="hero-subtitle">
+                            Detect plagiarism, AI-generated text, and suspicious similarities with a workflow that feels as polished as the platforms students already love.
+                        </p>
 
-        <div style={{ display: 'flex', gap: '20px', justifyContent: 'center' }}>
-          {isAuthenticated ? (
-            <Link to="/dashboard" className="btn-primary" style={{ textDecoration: 'none', padding: '16px 40px', fontSize: '18px' }}>
-              Go to Dashboard →
-            </Link>
-          ) : (
-            <>
-              <Link to="/register" className="btn-primary" style={{ textDecoration: 'none', padding: '16px 40px', fontSize: '18px' }}>
-                Get Started Free
-              </Link>
-              <Link to="/login" className="btn-secondary" style={{ textDecoration: 'none', padding: '16px 40px', fontSize: '18px' }}>
-                Sign In
-              </Link>
-            </>
-          )}
-        </div>
-      </div>
+                        <div className="hero-actions">
+                            <Link to="/register" className="btn-primary btn-lg">Launch Integrity Suite</Link>
+                            <Link to="/login" className="btn-ghost btn-lg">View Live Dashboard</Link>
+                        </div>
 
-      {/* Features Grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '32px', marginBottom: '100px' }}>
-        {[
-          { icon: '🔍', title: 'Semantic Analysis', desc: 'Goes beyond word matching to understand the meaning and context of your documents.', color: 'var(--primary)' },
-          { icon: '🤖', title: 'AI Content Detection', desc: 'Identify text generated by GPT-4, Claude, and other advanced models with high confidence.', color: 'var(--secondary)' },
-          { icon: '🖼️', title: 'Full OCR Support', desc: 'Analyze scanned PDFs and images effortlessly with our built-in Tesseract engine.', color: 'var(--accent)' }
-        ].map((feature, i) => (
-          <div key={i} className="glass card-hover" style={{ padding: '40px', textAlign: 'left' }}>
-            <div style={{
-              fontSize: '48px',
-              marginBottom: '24px',
-              width: '80px',
-              height: '80px',
-              background: 'rgba(255,255,255,0.03)',
-              borderRadius: '20px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              border: '1px solid var(--glass-border)'
-            }}>
-              {feature.icon}
-            </div>
-            <h3 style={{ fontSize: '24px', fontWeight: 700, marginBottom: '16px' }}>{feature.title}</h3>
-            <p style={{ color: 'var(--text-secondary)', fontSize: '16px', lineHeight: 1.7 }}>{feature.desc}</p>
-          </div>
-        ))}
-      </div>
+                        <div className="hero-stats">
+                            <div className="stat-card glow-card parallax-card" onMouseMove={handleParallax} onMouseLeave={handleParallaxLeave}>
+                                <div className="stat-value">98.7%</div>
+                                <div className="stat-label">Similarity precision</div>
+                            </div>
+                            <div className="stat-card glow-card parallax-card" onMouseMove={handleParallax} onMouseLeave={handleParallaxLeave}>
+                                <div className="stat-value">2.4s</div>
+                                <div className="stat-label">Average report build</div>
+                            </div>
+                            <div className="stat-card glow-card parallax-card" onMouseMove={handleParallax} onMouseLeave={handleParallaxLeave}>
+                                <div className="stat-value">24/7</div>
+                                <div className="stat-label">Realtime monitoring</div>
+                            </div>
+                        </div>
+                    </div>
 
-      {/* Stats Section */}
-      <div className="glass" style={{ padding: '60px', textAlign: 'center', background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.05) 0%, rgba(236, 72, 153, 0.05) 100%)' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '40px' }}>
-          {[
-            { label: 'Accuracy', value: '99.9%' },
-            { label: 'Processing Time', value: '< 2s' },
-            { label: 'File Types', value: '15+' },
-            { label: 'Open Source', value: '100%' }
-          ].map((stat, i) => (
-            <div key={i}>
-              <div style={{ fontSize: '40px', fontWeight: 800, marginBottom: '8px', color: 'white' }}>{stat.value}</div>
-              <div style={{ fontSize: '14px', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 600 }}>{stat.label}</div>
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
+                    <div className="hero-visual">
+                        <div className="screen">
+                            <div className="screen-header">
+                                <span className="screen-dot"></span>
+                                <span className="screen-dot active"></span>
+                                <span className="screen-dot"></span>
+                            </div>
+
+                            <div className="screen-body">
+                                <div className="scanbar"></div>
+                                <div className="screen-row">
+                                    <span className="chip">Batch 24 · Systems Lab</span>
+                                    <span className="chip">AI + Plagiarism</span>
+                                    <span className="chip">Risk: Low</span>
+                                </div>
+
+                                <div className="metric-grid">
+                                    <div className="metric-card">
+                                        <div className="metric-title">Top Similarity</div>
+                                        <div className="metric-value">12.4%</div>
+                                        <div className="progress"><span style={{ width: '62%' }}></span></div>
+                                    </div>
+                                    <div className="metric-card">
+                                        <div className="metric-title">AI Confidence</div>
+                                        <div className="metric-value">4.1%</div>
+                                        <div className="progress"><span style={{ width: '28%' }}></span></div>
+                                    </div>
+                                    <div className="metric-card">
+                                        <div className="metric-title">Docs Processed</div>
+                                        <div className="metric-value">38 / 40</div>
+                                        <div className="progress"><span style={{ width: '90%' }}></span></div>
+                                    </div>
+                                    <div className="metric-card">
+                                        <div className="metric-title">Flagged Matches</div>
+                                        <div className="metric-value">3</div>
+                                        <div className="progress"><span style={{ width: '18%' }}></span></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </motion.section>
+
+            <motion.section className="section" variants={itemVariants}>
+                <div className="container">
+                    <div className="section-header">
+                        <h2 className="section-title">Designed for high-stakes integrity</h2>
+                        <p className="section-subtitle">A modern experience for students, faculty, and academic operations teams.</p>
+                    </div>
+
+                    <div className="feature-grid">
+                        {[
+                            { title: 'Contextual Similarity', text: 'Sentence-level matching that highlights meaningful overlap, not just shared keywords.', icon: '01' },
+                            { title: 'AI Detection Signals', text: 'Multi-model scoring with transparent thresholds and confidence trails.', icon: '02' },
+                            { title: 'Cinematic Reporting', text: 'Export-ready PDF reports with visual match maps and auditable logs.', icon: '03' }
+                        ].map((feature) => (
+                            <div key={feature.title} className="feature-card card-hover glow-card parallax-card" onMouseMove={handleParallax} onMouseLeave={handleParallaxLeave}>
+                                <div className="feature-icon">{feature.icon}</div>
+                                <div className="feature-title">{feature.title}</div>
+                                <div className="feature-text">{feature.text}</div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            </motion.section>
+
+            <motion.section className="section" variants={itemVariants}>
+                <div className="container">
+                    <div className="section-header">
+                        <h2 className="section-title">Workflow built for real classrooms</h2>
+                        <p className="section-subtitle">Role-based flows that keep everything fast, organized, and secure.</p>
+                    </div>
+
+                    <div className="workflow-grid">
+                        <div className="workflow-card card-hover glow-card parallax-card" onMouseMove={handleParallax} onMouseLeave={handleParallaxLeave}>
+                            <div className="workflow-badge">Student Portal</div>
+                            <div className="workflow-title">Submit with confidence</div>
+                            <p className="feature-text">Upload PDF, DOCX, or TXT files and track the status as the system checks your work.</p>
+                            <ul className="workflow-list">
+                                <li><span className="text-gradient">✓</span> Secure uploads with automatic hashing</li>
+                                <li><span className="text-gradient">✓</span> Live status updates per submission</li>
+                                <li><span className="text-gradient">✓</span> Maintain formatting and structure</li>
+                            </ul>
+                        </div>
+
+                        <div className="workflow-card card-hover glow-card parallax-card" onMouseMove={handleParallax} onMouseLeave={handleParallaxLeave}>
+                            <div className="workflow-badge" style={{ background: 'rgba(34, 211, 238, 0.18)', color: 'var(--accent)' }}>Faculty Console</div>
+                            <div className="workflow-title">Review at a glance</div>
+                            <p className="feature-text">Surface high-risk matches and drill into the exact passages that need attention.</p>
+                            <ul className="workflow-list">
+                                <li><span className="text-gradient">✓</span> Cross-batch similarity detection</li>
+                                <li><span className="text-gradient">✓</span> AI + plagiarism blending in one report</li>
+                                <li><span className="text-gradient">✓</span> Shareable PDFs for academic records</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </motion.section>
+
+            <motion.section className="section" variants={itemVariants}>
+                <div className="container">
+                    <div className="cta">
+                        <h3>Make integrity feel premium</h3>
+                        <p>Replace stale dashboards with a polished, cinematic UI your faculty and students will actually enjoy using.</p>
+                        <div className="hero-actions" style={{ justifyContent: 'center' }}>
+                            <Link to="/register" className="btn-primary btn-lg">Start Your Pilot</Link>
+                            <Link to="/login" className="btn-ghost btn-lg">Explore Reports</Link>
+                        </div>
+                        <div className="logo-row">
+                            {['FastAPI', 'PyTorch', 'Sentence-BERT', 'PostgreSQL', 'Redis', 'React'].map(tech => (
+                                <span key={tech}>{tech}</span>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            </motion.section>
+        </motion.div>
+    );
 };
 
 export default LandingPage;

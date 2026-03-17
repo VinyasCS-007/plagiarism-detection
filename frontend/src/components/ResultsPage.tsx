@@ -15,10 +15,6 @@ interface DocumentResult {
     document_id: string;
     filename: string;
     status: string;
-    ai_analysis: {
-        score: number;
-        is_ai: boolean;
-    };
     plagiarism_analysis: PlagiarismMatch[];
 }
 
@@ -35,7 +31,7 @@ const ResultsPage: React.FC = () => {
 
             try {
                 const token = localStorage.getItem('token');
-                const response = await fetch(`/api/batches/${batchId}/results`, {
+                const response = await fetch(`/api/v1/batches/${batchId}/results`, {
                     headers: { 'Authorization': `Bearer ${token}` },
                 });
 
@@ -79,7 +75,7 @@ const ResultsPage: React.FC = () => {
     return (
         <div className="fade-in" style={{ padding: '60px 0', maxWidth: '1000px', margin: '0 auto' }}>
             <div style={{ marginBottom: '40px' }}>
-                <h1 className="text-gradient" style={{ fontSize: '48px', fontWeight: 800 }}>Analysis Report</h1>
+                <h1 className="text-gradient" style={{ fontSize: '48px', fontWeight: 800 }}>Plagiarism Report</h1>
                 <p style={{ color: 'var(--text-secondary)' }}>Batch ID: {batchId}</p>
             </div>
 
@@ -99,28 +95,7 @@ const ResultsPage: React.FC = () => {
                             </span>
                         </div>
 
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', marginBottom: '32px' }}>
-                            {/* AI Score */}
-                            <div style={{ background: 'rgba(255,255,255,0.03)', padding: '20px', borderRadius: '16px' }}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                                    <span style={{ fontWeight: 600 }}>AI Probability</span>
-                                    <span style={{ fontWeight: 700, color: doc.ai_analysis.is_ai ? 'var(--error)' : 'var(--success)' }}>
-                                        {(doc.ai_analysis.score * 100).toFixed(1)}%
-                                    </span>
-                                </div>
-                                <div style={{ height: '8px', background: 'rgba(255,255,255,0.1)', borderRadius: '100px', overflow: 'hidden' }}>
-                                    <div style={{
-                                        width: `${doc.ai_analysis.score * 100}%`,
-                                        height: '100%',
-                                        background: doc.ai_analysis.is_ai ? 'var(--error)' : 'var(--success)',
-                                        transition: 'width 1s ease'
-                                    }} />
-                                </div>
-                                <p style={{ fontSize: '13px', marginTop: '8px', color: 'var(--text-muted)' }}>
-                                    {doc.ai_analysis.is_ai ? 'Likely AI-Generated' : 'Likely Human-Written'}
-                                </p>
-                            </div>
-
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '24px', marginBottom: '32px' }}>
                             {/* Plagiarism Score */}
                             <div style={{ background: 'rgba(255,255,255,0.03)', padding: '20px', borderRadius: '16px' }}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>

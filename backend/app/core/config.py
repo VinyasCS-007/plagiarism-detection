@@ -4,7 +4,7 @@ from typing import Optional
 
 class Settings(BaseSettings):
     # Database
-    DATABASE_URL: str = "postgresql+asyncpg://postgres:root@127.0.0.1:5432/plagiarism"
+    DATABASE_URL: str = "postgresql+asyncpg://postgres:root@127.0.0.1:5432/plagiarism_db"
 
     # Security
     SECRET_KEY: str = "your-super-secret-key-change-in-production"

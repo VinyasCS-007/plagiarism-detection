@@ -12,18 +12,19 @@ from app.services.ai_detection import AIDetectionService
 from app.core.celery import app
 import asyncio
 
-engine = create_async_engine(settings.DATABASE_URL, echo=False)
-SessionLocal = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
-
 embedding_service = EmbeddingService()
 ai_service = AIDetectionService()
 
 @app.task
 def process_batch(batch_id: str, provider: str = "local", ai_threshold: float = 0.5):
-    """Process a batch of documents for plagiarism and/or AI detection"""
+    import asyncio
     asyncio.run(_process_batch_async(batch_id, provider, ai_threshold))
 
 async def _process_batch_async(batch_id: str, provider: str, ai_threshold: float):
+
+    engine = create_async_engine(settings.DATABASE_URL, echo=False)
+    SessionLocal = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+
     async with SessionLocal() as session:
         # Get batch and documents
         batch = await session.get(Batch, batch_id)
@@ -32,7 +33,8 @@ async def _process_batch_async(batch_id: str, provider: str, ai_threshold: float
             return
         
         batch.status = "processing"
-        await session.commit()
+        await session.flush()
+        
         
         # Get all documents in this batch
         from sqlalchemy import select
@@ -45,7 +47,7 @@ async def _process_batch_async(batch_id: str, provider: str, ai_threshold: float
         
         # Instantiate PlagiarismService
         from app.services.plagiarism import PlagiarismService
-        plagiarism_service = PlagiarismService(session)
+        plagiarism_service = PlagiarismService(session, embedding_service=embedding_service)
 
         # Process each document
         for doc in documents:
@@ -79,22 +81,30 @@ async def _process_batch_async(batch_id: str, provider: str, ai_threshold: float
                 
                 # Plagiarism Detection (semantic similarity)
                 if analysis_type in ["plagiarism", "both", "mixed"]:
-                    if doc.text_content and embedding_service.model:
+                    if not embedding_service.model:
+                        raise RuntimeError("Embedding model is unavailable. Plagiarism analysis requires embeddings.")
+
+                    if doc.text_content:
                         # Generate embedding (average) for legacy compatibility/search
                         embedding = embedding_service.generate_text_embedding(doc.text_content)
-                        doc.embedding = embedding
-                        
-                        # Find similar documents in batch using new PlagiarismService
-                        similar_results = await plagiarism_service.find_similar_in_batch(doc, batch_id)
-                        
+                        if embedding:
+                            doc.embedding = embedding
+
+                        # Find similar documents across the ENTIRE database
+                        # This ensures cross-batch plagiarism detection
+                        similar_results = await plagiarism_service.find_similar_across_all_documents(doc)
+
                         # Store comparisons
                         for res in similar_results:
+                            doc_a, doc_b = sorted([doc.id, res["document_id"]], key=lambda x: str(x))
+
                             comparison = Comparison(
-                                doc_a=doc.id,
-                                doc_b=res["document_id"],
+                                doc_a=doc_a,
+                                doc_b=doc_b,
                                 similarity=res["similarity"],
-                                matches=res.get("matches", [])  # Store detailed matches in JSONB field
+                                matches=res.get("matches", [])
                             )
+
                             session.add(comparison)
                 
                 doc.status = "completed"
@@ -108,3 +118,4 @@ async def _process_batch_async(batch_id: str, provider: str, ai_threshold: float
         batch.status = "completed"
         batch.processed_docs = len([d for d in documents if d.status == "completed"])
         await session.commit()
+    await engine.dispose()
